@@ -6,12 +6,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-/*
-USO: ./src/TranslationsFinder/console find:tags /var/www/elolimpo.com/app/Elolimpo/View  /var/www/elolimpo.com/app/Elolimpo/Locale/es_ES/LC_MESSAGES/messages.po
-(añadir dry-run para que no escriba
-luego, para generar los PO:
-msgfmt -cv -o messages.mo messages.po
-*/
+
 class Find extends Command
 {
     const DEFAULT_TAG = 'trans';
