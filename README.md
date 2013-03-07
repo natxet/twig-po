@@ -6,7 +6,13 @@ Extract translation keys from twig templates and move them to PO
 Instructions
 ------------
 
-First, download or clone, go to folder and execute:
+Fork and install (you need composer for that!):
+
+    git clone git@github.com:your-user/twig-po.git
+    cd twig-po
+    composer install
+
+Then, go to folder and execute:
 
     ./console find:tags /path/to/twig/templates  /path/to/messages.po --dry-run
 
