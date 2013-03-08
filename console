@@ -1,13 +1,14 @@
 #!/usr/bin/env php
 <?php
 namespace TranslationsFinder;
-define( 'VENDOR_PATH', __DIR__ . '/vendor/' ); 
 
-require VENDOR_PATH . 'autoload.php';
-require __DIR__ . '/Find.php';
+define( 'VENDOR_PATH', __DIR__ . '/vendor/' );
+
+$loader = require_once( VENDOR_PATH . 'autoload.php' );
+$loader->add( 'TranslationsFinder', __DIR__ );
 
 use Symfony\Component\Console\Application;
 
 $application = new Application();
-$application->add(new Find);
+$application->add( new Find );
 $application->run();
