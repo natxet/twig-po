@@ -31,7 +31,7 @@ class Find extends Command
                 InputArgument::REQUIRED,
                 'PO file for check and write to'
             )
-	    ->addOption(
+	    	->addOption(
                 'dry-run',
                 'd',
                 InputOption::VALUE_NONE,
@@ -41,58 +41,49 @@ class Find extends Command
                 'tag',
                 't',
                 InputOption::VALUE_OPTIONAL,
-                'Look for a tag name, by default, "trans". For closing, will be "end".tag'
+                'Look for a tag name, by default, "trans". For closing, will be "end".tag',
+                self::DEFAULT_TAG
             )
         ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-	$path = $input->getArgument('path');
-	if ( !file_exists( $path ) ) {
-		Throw new \InvalidArgumentException("ERROR: $path does not exist");
-	}
-	if ( strrpos( $path, DIRECTORY_SEPARATOR) == strlen( $path ) -1 ) {
-		$path = substr( $path, 0, -1 ); 
-	}
+		$path 			= rtrim( $input->getArgument('path'), DIRECTORY_SEPARATOR );
+		$tag 			= $input->getOption('tag');
+		$po_filename 	= $input->getArgument('po-file');
+		if ( !is_file( $po_filename ) ){
+			throw new \InvalidArgumentException("ERROR: $po_filename PO FILE does not exist");
+		}
 
-	$po_filename = $input->getArgument('po-file');
-	
-	( $dry_run = $input->getOption('dry-run') ) or $dry_run = false;
-	( $tag = $input->getOption('tag') ) or $tag = self::DEFAULT_TAG;
+		$output->writeln("<fg=green>Searching for {%$tag%} tags in $path recursively</fg=green>");
 
-	$output->writeln("<fg=green>Searching for {%$tag%} tags in $path recursively</fg=green>");
+		$this->setTagRegex( $tag );
+		$read_files 	= $this->searchDirectory( $path );
+		$tags 			= $this->tags;
 
-	$this->setTagRegex( $tag );
-	$read_files = $this->searchDirectory( $path );
-	
-	$tags = $this->tags;
-	$output->writeln("<fg=green>Finished search! Found " . count($tags) . " tags in $read_files files</fg=green>");
+		$output->writeln("<fg=green>Finished search! Found " . count($tags) . " tags in $read_files files</fg=green>");
+		$output->writeln("<fg=magenta>Filtering Existing msgids from $po_filename</fg=magenta>");
 
-	if( $po_filename ) {
+		$existing_tags 	= $this->getMsgIdsFromFile( $po_filename );
+		$tags 			= $this->filterExistingTags( $tags, $existing_tags );
+		$deleted 		= count($this->tags) - count($tags);
 
-                if ( !file_exists( $po_filename ) ) Throw new \InvalidArgumentException("ERROR: $po_filename PO FILE does not exist");
-                $output->writeln("<fg=magenta>Filtering Existing msgids from $po_filename</fg=magenta>");
-                $existing_tags = $this->getMsgIdsFromFile( $po_filename );
-		$tags = $this->filterExistingTags( $tags, $existing_tags );
-		$deleted = count($this->tags) - count($tags);
 		$output->writeln("<fg=magenta>Deleted " . $deleted . " tags from " . count($existing_tags) . " existing tags in the PO file</fg=magenta>"); 
-	}
+		$output->writeln("<fg=green>Outputing " . count($tags) . " tags</fg=green>");
 
-	$output->writeln("<fg=green>Outputing " . count($tags) . " tags</fg=green>");
-	if( count( $tags ) ) {
-
-		$output_tags = $this->outputTags( $tags );
-		if( $dry_run ) {
-			$output->writeln("<fg=yellow>Dry-run! PO file will not be touched! Showing output:</fg=yellow>");
-			echo $output_tags;
+		if( count( $tags ) ) {
+			$output_tags = $this->outputTags( $tags );
+			if( $input->getOption('dry-run') ) {
+				$output->writeln("<fg=yellow>Dry-run! PO file will not be touched! Showing output:</fg=yellow>");
+				echo $output_tags;
+			}
+			else {
+				file_put_contents( $po_filename, file_get_contents( $po_filename ) . $output_tags );
+				$output->writeln("<fg=magenta>PO FILE UPDATED!</fg=magenta>");
+			}
+			// TO-DO: hacer lo de arriba bien!
 		}
-		else {
-			file_put_contents( $po_filename, file_get_contents( $po_filename ) . $output_tags );
-			$output->writeln("<fg=magenta>PO FILE UPDATED!</fg=magenta>");
-		}
-		// TO-DO: hacer lo de arriba bien!
-	}
     }
 
     protected function filterExistingTags( $tags, $existing_tags ) {
@@ -148,59 +139,51 @@ EOT;
 	return $output;
     }
 
-    protected function setTagRegex( $tag ) {
-
-	$this->tag_regex = str_replace( '__TAG__', $tag, self::DEFAULT_TAG_REGEX );
+    protected function setTagRegex( $tag )
+    {
+		$this->tag_regex = str_replace( '__TAG__', $tag, self::DEFAULT_TAG_REGEX );
     }
 
-    protected function searchFile( $filename ) {
-
-	$contents = file_get_contents( $filename );
-	$res = preg_match_all( $this->tag_regex, $contents, $matches );
-	if ($res && isset( $matches[1] )){
-
-		foreach( array_unique( $matches[1] ) as $tag) {
-			$this->addTag( $tag, $filename );
+    protected function searchFile( $filename )
+    {
+		$contents 	= file_get_contents( $filename );
+		$tags_found = preg_match_all( $this->tag_regex, $contents, $matches );
+		if ( $tags_found && isset( $matches[1] ) ){
+			foreach( array_unique( $matches[1] ) as $tag) {
+				$this->addTag( $tag, $filename );
+			}
 		}
-	}
     }
 
-    protected function addTag( $tag, $filename ) {
-
-	// this is for the PO format of the variables
+    protected function addTag( $tag, $filename )
+    {
+		// this is for the PO format of the variables
         $tag = preg_replace( array('/{{ (.*) }}/muU', '/{{(.*)}}/muU'), '%\1%', $tag );
 
-	if( !array_key_exists( $tag, $this->tags ) ) {
+		if( !array_key_exists( $tag, $this->tags ) ) {
             $this->tags[$tag] = array( $filename );
         }
-        else {
+        else
+        {
             $this->tags[$tag][] = $filename;
         }
-
     }
 
-    protected function searchDirectory( $path ) {
+    protected function searchDirectory( $path )
+    {
+    	if( is_file( $path ) ) {
+			$this->searchFile( $path );
+			return 1;
+		}
 
-	if( is_file( $path ) ) {
-		$this->searchFile( $path );
-		return 1;
-	}
-	$read_files = 0;
-	foreach(new \DirectoryIterator( $path ) as $fileinfo ){
-		
-		$filename = $fileinfo->getFilename();
+    	$directory 	= new \DirectoryIterator( $path );
+		$read_files = 0;
 
-		if ( $filename === '.' || $filename === '..' ) {
-			continue;
+		foreach( $directory as $fileinfo ){
+			if ( !$fileinfo->isDot() ) {
+				$read_files += $this->searchDirectory( $path . DIRECTORY_SEPARATOR. $fileinfo->getFilename() );
+			}
 		}
-		elseif ( $fileinfo->isDir() ) {
-			$read_files += $this->searchDirectory( $path . DIRECTORY_SEPARATOR. $filename );
-		}
-		elseif ( $fileinfo->isFile() ) {
-			$this->searchFile( $path . DIRECTORY_SEPARATOR . $filename );
-			$read_files++;
-		}
-	}
-	return $read_files;
+		return $read_files;
     }
 }
