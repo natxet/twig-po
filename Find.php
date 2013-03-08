@@ -9,17 +9,25 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class Find extends Command
 {
-    const DEFAULT_TAG = 'trans';
-    const DEFAULT_TAG_REGEX = "/{% ?__TAG__ ?%}(.*){% ?end__TAG__ ?%}/muU";
+    const TAG_REGEX 	 = '/{% ?trans ?%}(.*)(?:{% ? plural (.*)?%}(.*))?{% ?endtrans ?%}/muU';
+    const MODIFIER_REGEX = '/([a-zA-Z_0-9]+)|trans/muU';
+    const MSGID_REGEX    = '/msgid "(.*)"/mu';
 
-    protected $tag_regex;
-    protected $tags = array();
     protected $last_filename;
+
+    // searcher stats
+    protected $n_found_tags = 0;
+    protected $n_read_files = 0;
+
+    // program options
+    protected $dry_run      = false;
+    protected $verbose      = false;
+    protected $output_tags  = false;
 
     protected function configure()
     {
         $this
-            ->setName('find:tags')
+            ->setName('find')
             ->setDescription('Find {%trans%} tags in a directory')
             ->addArgument(
                 'path',
@@ -35,75 +43,80 @@ class Find extends Command
                 'dry-run',
                 'd',
                 InputOption::VALUE_NONE,
-                'Just output the results. Otherwise, the PO file will be writen'
+                'Do not write the new tags in the PO file'
             )
             ->addOption(
-                'tag',
-                't',
-                InputOption::VALUE_OPTIONAL,
-                'Look for a tag name, by default, "trans". For closing, will be "end".tag'
+                'verbose',
+                'v',
+                InputOption::VALUE_NONE,
+                'Output information of every step'
+            )
+            ->addOption(
+                'output-tags',
+                'o',
+                InputOption::VALUE_NONE,
+                'Output the tags as they will appear in the final PO file'
             )
         ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-	$path = $input->getArgument('path');
-	if ( !file_exists( $path ) ) {
-		Throw new \InvalidArgumentException("ERROR: $path does not exist");
-	}
-	if ( strrpos( $path, DIRECTORY_SEPARATOR) == strlen( $path ) -1 ) {
-		$path = substr( $path, 0, -1 ); 
-	}
+	$path         = $this->filterPath( $input->getArgument('path') );
+	$po_filename  = $this->filterPoFilename( $input->getArgument('po-file') );
 
-	$po_filename = $input->getArgument('po-file');
-	
-	( $dry_run = $input->getOption('dry-run') ) or $dry_run = false;
-	( $tag = $input->getOption('tag') ) or $tag = self::DEFAULT_TAG;
+	$this->dry_run     = $input->getOption('dry-run');
+	$this->verbose     = $input->getOption('verbose');
+	$this->output_tags = $input->getOption('output-tags');
 
-	$output->writeln("<fg=green>Searching for {%$tag%} tags in $path recursively</fg=green>");
+	$existing_tags = $this->getMsgIdsFromFile( $po_filename );
 
-	$this->setTagRegex( $tag );
-	$read_files = $this->searchDirectory( $path );
-	
-	$tags = $this->tags;
-	$output->writeln("<fg=green>Finished search! Found " . count($tags) . " tags in $read_files files</fg=green>");
+        if ($this->verbose) $output->writeln("<fg=green>Found ".count($existing_tags)." msgids in $po_filename.</fg=green>");
+	if ($this->verbose) $output->writeln("<fg=green>Searching for translations in $path recursively</fg=green>");
 
-	if( $po_filename ) {
+	$tags = array();
+	$this->searchDirectory( $path, $tags, $existing_tags );
+	$n_tags = count( $tags );
+	$matched_tags = $this->n_found_tags - $n_tags;
 
-                if ( !file_exists( $po_filename ) ) Throw new \InvalidArgumentException("ERROR: $po_filename PO FILE does not exist");
-                $output->writeln("<fg=magenta>Filtering Existing msgids from $po_filename</fg=magenta>");
-                $existing_tags = $this->getMsgIdsFromFile( $po_filename );
-		$tags = $this->filterExistingTags( $tags, $existing_tags );
-		$deleted = count($this->tags) - count($tags);
-		$output->writeln("<fg=magenta>Deleted " . $deleted . " tags from " . count($existing_tags) . " existing tags in the PO file</fg=magenta>"); 
-	}
+        if ($this->verbose) $output->writeln("<fg=green>Finished search! Found $this->n_found_tags tags in $this->n_read_files files</fg=green>");
+	if ($this->verbose && $matched_tags) $output->writeln("<fg=magenta>" . $matched_tags . " tags were already in the PO file</fg=magenta>"); 
+	if ($this->verbose) $output->writeln("<fg=green>Outputing " . $n_tags . " tags</fg=green>");
 
-	$output->writeln("<fg=green>Outputing " . count($tags) . " tags</fg=green>");
-	if( count( $tags ) ) {
+	if ($n_tags) {
 
 		$output_tags = $this->outputTags( $tags );
-		if( $dry_run ) {
-			$output->writeln("<fg=yellow>Dry-run! PO file will not be touched! Showing output:</fg=yellow>");
+		
+		if( $this->output_tags ) {
 			echo $output_tags;
+		}
+
+		if( $this->dry_run ) {
+			if ($this->verbose) $output->writeln("<fg=yellow>Dry-run: PO file will not be touched</fg=yellow>");
 		}
 		else {
 			file_put_contents( $po_filename, file_get_contents( $po_filename ) . $output_tags );
-			$output->writeln("<fg=magenta>PO FILE UPDATED!</fg=magenta>");
+			if ($this->verbose) $output->writeln("<fg=magenta>PO FILE UPDATED!</fg=magenta>");
 		}
+
 		// TO-DO: hacer lo de arriba bien!
 	}
     }
 
-    protected function filterExistingTags( $tags, $existing_tags ) {
+    protected function filterPoFilename( $po_filename ) {
 
-	$new = array_diff( array_keys( $tags ), $existing_tags );
+	if(  !file_exists( $po_filename ) ) throw new \InvalidArgumentException("ERROR: $po_filename PO FILE does not exist");
+	return $po_filename;
+    }
 
-	foreach( $tags as $tag => $files ) {
-		if( in_array( $tag, $existing_tags ) ) unset( $tags[$tag] );
-	}
+    protected function filterPath( $path ) {
 
-	return $tags;
+        if ( !file_exists( $path ) ) throw new \InvalidArgumentException("ERROR: $path does not exist");
+        
+        if ( strrpos( $path, DIRECTORY_SEPARATOR) == strlen( $path ) -1 ) {
+                $path = substr( $path, 0, -1 );
+        }
+	return $path;
     }
 
     /**
@@ -111,17 +124,16 @@ class Find extends Command
     */
     protected function getMsgIdsFromFile( $filename ) {
 
-	$msg_ids = array();
-	$file_handle = fopen( $filename, 'r');
-	while ( !feof( $file_handle ) ) {
-	   $line = fgets( $file_handle );
-	   if ( strpos( trim( $line ), 'msgid' ) === 0 ) {
-		preg_match( '/msgid "(.*)"/mu', $line, $matches );
-		if( isset( $matches[1] ) ) $msg_ids[] = $matches[1];
-	   }
-	}
-	fclose( $file_handle );
-	return $msg_ids;
+	return $this->pregMatchAllFile( $filename, self::MSGID_REGEX );
+    }
+
+    // TO-DO: accept several regex
+    // TO-DO: option for returning an array_unique
+    protected function pregMatchAllFile( $filename, $regex ) {
+
+
+        $res = preg_match_all( $regex, file_get_contents( $filename ), $matches );
+        return ( isset( $matches[1] ) ) ? $matches[1] : array();
     }
 
     protected function outputTags( $tags ) {
@@ -137,7 +149,7 @@ class Find extends Command
 
 	$output = '';
 	foreach( $filenames as $filename ) {
-		$output .= "\n# $filename";
+		$output .= "\n#: $filename";
 	}
 	$output .= <<<EOT
 
@@ -148,59 +160,58 @@ EOT;
 	return $output;
     }
 
-    protected function setTagRegex( $tag ) {
+    // TO-DO: Allow plurals!
+    protected function addTag( &$tags, $tag, $filename ) {
 
-	$this->tag_regex = str_replace( '__TAG__', $tag, self::DEFAULT_TAG_REGEX );
-    }
-
-    protected function searchFile( $filename ) {
-
-	$contents = file_get_contents( $filename );
-	$res = preg_match_all( $this->tag_regex, $contents, $matches );
-	if ($res && isset( $matches[1] )){
-
-		foreach( array_unique( $matches[1] ) as $tag) {
-			$this->addTag( $tag, $filename );
-		}
-	}
-    }
-
-    protected function addTag( $tag, $filename ) {
-
-	// this is for the PO format of the variables
-        $tag = preg_replace( array('/{{ (.*) }}/muU', '/{{(.*)}}/muU'), '%\1%', $tag );
-
-	if( !array_key_exists( $tag, $this->tags ) ) {
-            $this->tags[$tag] = array( $filename );
+	if( !array_key_exists( $tag, $tags ) ) {
+            $tags[$tag] = array( $filename );
+	    $this->n_found_tags++;
         }
         else {
-            $this->tags[$tag][] = $filename;
+            $tags[$tag][] = $filename;
         }
 
     }
 
-    protected function searchDirectory( $path ) {
+    protected function parseTag( $tag ) {
+
+	return preg_replace( array('/{{ (.*) }}/muU', '/{{(.*)}}/muU'), '%\1%', $tag );
+    }
+
+    protected function parseFile( $filename, &$tags, $existing_tags ) {
+
+	$this->n_read_files++;
+	$matches = array_unique( $this->pregMatchAllFile( $filename, self::TAG_REGEX ) );
+
+        foreach( $matches as $tag) {
+		if ( in_array( $tag, $existing_tags ) ) continue;
+		$tag = $this->parseTag( $tag );
+        	$this->addTag( $tags, $tag, $filename );
+        }
+    }
+
+    protected function searchDirectory( $path, &$tags, $existing_tags ) {
 
 	if( is_file( $path ) ) {
-		$this->searchFile( $path );
-		return 1;
+		$this->parseFile( $path, $tags, $existing_tags );
 	}
-	$read_files = 0;
-	foreach(new \DirectoryIterator( $path ) as $fileinfo ){
-		
-		$filename = $fileinfo->getFilename();
+	elseif( is_dir( $path ) ) {
 
-		if ( $filename === '.' || $filename === '..' ) {
-			continue;
-		}
-		elseif ( $fileinfo->isDir() ) {
-			$read_files += $this->searchDirectory( $path . DIRECTORY_SEPARATOR. $filename );
-		}
-		elseif ( $fileinfo->isFile() ) {
-			$this->searchFile( $path . DIRECTORY_SEPARATOR . $filename );
-			$read_files++;
+		foreach( new \DirectoryIterator( $path ) as $fileinfo ){
+			
+			$filename = $fileinfo->getFilename();
+			$full_filename = $path . DIRECTORY_SEPARATOR. $filename;
+	
+			if ( $filename === '.' || $filename === '..' ) {
+				continue;
+			}
+			elseif ( $fileinfo->isDir() ) {
+				$this->searchDirectory( $full_filename, $tags, $existing_tags );
+			}
+			elseif ( $fileinfo->isFile() ) {
+				$this->parseFile( $full_filename, $tags, $existing_tags );
+			}
 		}
 	}
-	return $read_files;
     }
 }
