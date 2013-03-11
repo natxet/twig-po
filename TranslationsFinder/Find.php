@@ -7,9 +7,12 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+/* ./console find:tags /path/to/twig/tpls/ /path/to/Locale/en_US/LC_MESSAGES/routes.po Po -t "/{{(.*)}}/muU"
+*/
+
 class Find extends Command
 {
-    const TAG_REGEX      = '/{% ?trans ?%}(.*)(?:{% ? plural (.*)?%}(.*))?{% ?endtrans ?%}/muU';
+    const TAG_REGEX = '/{% ?trans ?%}(.*)(?:{% ? plural (.*)?%}(.*))?{% ?endtrans ?%}/muU';
     const MODIFIER_REGEX = '/([a-zA-Z_0-9]+)|trans/muU';
 
     /**
@@ -31,6 +34,7 @@ class Find extends Command
     protected $dry_run = false;
     protected $verbose = false;
     protected $output_tags = false;
+    protected $tag_regex;
 
     /**
      * @var Format\FormatInterface
@@ -53,6 +57,11 @@ class Find extends Command
             'format',
             InputArgument::REQUIRED,
             'Format to use, for instance "Po" (CamelCase)'
+        )->addOption(
+            'tag-regex',
+            't',
+            InputOption::VALUE_OPTIONAL,
+            'Change regex for finding tag. By default: "' . self::TAG_REGEX . '"'
         )->addOption(
             'dry-run',
             'd',
@@ -157,6 +166,8 @@ class Find extends Command
         $this->dry_run     = $input->getOption( 'dry-run' );
         $this->verbose     = $input->getOption( 'verbose' );
         $this->output_tags = $input->getOption( 'output-tags' );
+        $regex             = $input->getOption( 'tag-regex' );
+        $this->tag_regex   = $regex ? $regex : self::TAG_REGEX;
     }
 
     /**
@@ -250,7 +261,7 @@ class Find extends Command
     protected function parseFile( $filename, &$tags, $existing_tags )
     {
         $this->n_read_files++;
-        $matches = array_unique( $this->pregMatchAllFile( $filename, self::TAG_REGEX ) );
+        $matches = array_unique( $this->pregMatchAllFile( $filename, $this->tag_regex ) );
 
         foreach ( $matches as $tag ) {
             if (in_array( $tag, $existing_tags )) {
