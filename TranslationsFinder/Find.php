@@ -12,6 +12,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class Find extends Command
 {
+    /* TO-DO: Plural is not working at all! */
     const TAG_REGEX = '/{% ?trans ?%}(.*)(?:{% ? plural (.*)?%}(.*))?{% ?endtrans ?%}/muU';
     const MODIFIER_REGEX = '/([a-zA-Z_0-9]+)|trans/muU';
 
