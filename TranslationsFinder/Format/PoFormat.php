@@ -23,7 +23,7 @@ class PoFormat implements FormatInterface {
      */
     public function parseTag( $tag )
     {
-        return preg_replace( array( '/{{ (.*) }}/muU', '/{{(.*)}}/muU' ), '%\1%', $tag );
+        return $tag;
     }
 
     /**
@@ -34,6 +34,8 @@ class PoFormat implements FormatInterface {
      */
     public function outputTag( $tag, $file_names = array() )
     {
+        $tag = preg_replace( array( '/{{ (.*) }}/muU', '/{{(.*)}}/muU' ), '%\1%', $tag );
+        $tag = str_replace( '"', '\"', $tag );
         $output = '';
         foreach ( $file_names as $filename ) {
 
