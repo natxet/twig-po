@@ -13,7 +13,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 class Find extends Command
 {
     /* TO-DO: Plural is not working at all! */
-    const TAG_REGEX = '/{% ?trans ?%}(.*)(?:{% ? plural (.*)?%}(.*))?{% ?endtrans ?%}/muU';
+    const TAG_REGEX      = '/{% ?trans ?%}(.*)(?:{% ? plural (.*)?%}(.*))?{% ?endtrans ?%}/muU';
     const MODIFIER_REGEX = '/([a-zA-Z_0-9]+)|trans/muU';
 
     /**
@@ -47,38 +47,38 @@ class Find extends Command
         $this->setName( 'find:tags' )->setDescription(
             'Find {%trans%} tags in a directory'
         )->addArgument(
-            'path',
-            InputArgument::REQUIRED,
-            'Please include the path where you want me to find tags'
-        )->addArgument(
-            'messages-filename',
-            InputArgument::REQUIRED,
-            'file for check and write to'
-        )->addArgument(
-            'format',
-            InputArgument::REQUIRED,
-            'Format to use, for instance "Po" (CamelCase)'
-        )->addOption(
-            'tag-regex',
-            't',
-            InputOption::VALUE_OPTIONAL,
-            'Change regex for finding tag. By default: "' . self::TAG_REGEX . '"'
-        )->addOption(
-            'dry-run',
-            'd',
-            InputOption::VALUE_NONE,
-            'Do not write the new tags in the messages file'
-        )->addOption(
-            'verbose',
-            'v',
-            InputOption::VALUE_NONE,
-            'Output information of every step'
-        )->addOption(
-            'output-tags',
-            'o',
-            InputOption::VALUE_NONE,
-            'Output the tags as they will appear in the final PO file'
-        );
+                'path',
+                InputArgument::REQUIRED,
+                'Please include the path where you want me to find tags'
+            )->addArgument(
+                'messages-filename',
+                InputArgument::REQUIRED,
+                'file for check and write to'
+            )->addArgument(
+                'format',
+                InputArgument::REQUIRED,
+                'Format to use, for instance "Po" (CamelCase)'
+            )->addOption(
+                'tag-regex',
+                't',
+                InputOption::VALUE_OPTIONAL,
+                'Change regex for finding tag. By default: "' . self::TAG_REGEX . '"'
+            )->addOption(
+                'dry-run',
+                'd',
+                InputOption::VALUE_NONE,
+                'Do not write the new tags in the messages file'
+            )->addOption(
+                'verbose',
+                'v',
+                InputOption::VALUE_NONE,
+                'Output information of every step'
+            )->addOption(
+                'output-tags',
+                'o',
+                InputOption::VALUE_NONE,
+                'Output the tags as they will appear in the final PO file'
+            );
     }
 
     protected function execute( InputInterface $input, OutputInterface $output )
@@ -228,7 +228,7 @@ class Find extends Command
     protected function outputTags( $tags )
     {
         $output = "";
-        foreach ( $tags as $tag => $file_names ) {
+        foreach ($tags as $tag => $file_names) {
 
             $output .= $this->outputTag( $tag, $file_names );
         }
@@ -282,7 +282,7 @@ class Find extends Command
             $this->parseFile( $path, $tags, $existing_tags );
         } elseif (is_dir( $path )) {
 
-            foreach ( new \DirectoryIterator( $path ) as $fileinfo ) {
+            foreach (new \DirectoryIterator( $path ) as $fileinfo) {
 
                 $filename      = $fileinfo->getFilename();
                 $full_filename = $path . DIRECTORY_SEPARATOR . $filename;

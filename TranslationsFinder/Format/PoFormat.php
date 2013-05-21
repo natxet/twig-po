@@ -1,9 +1,10 @@
 <?php
 namespace TranslationsFinder\Format;
 
-class PoFormat implements FormatInterface {
+class PoFormat implements FormatInterface
+{
 
-    const MSGID_REGEX    = '/msgid "(.*)"/mu';
+    const MSGID_REGEX = '/msgid "(.*)"/mu';
 
     /**
      * @param string $file_contents the file in string
@@ -34,9 +35,9 @@ class PoFormat implements FormatInterface {
      */
     public function outputTag( $tag, $file_names = array() )
     {
-        $tag = $this->outputString( $tag );
+        $tag    = $this->outputString( $tag );
         $output = '';
-        foreach ( $file_names as $filename ) {
+        foreach ($file_names as $filename) {
 
             $output .= <<<EOT
 
@@ -61,7 +62,8 @@ EOT;
      *
      * @return string The string outputted
      */
-    public function outputString( $string ) {
+    public function outputString( $string )
+    {
 
         $string = preg_replace( array( '/{{ (.*) }}/muU', '/{{(.*)}}/muU' ), '%\1%', $string );
         $string = str_replace( '"', '\"', $string );

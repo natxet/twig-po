@@ -19,7 +19,7 @@ interface FormatInterface
     public function parseTag( $tag );
 
     /**
-     * @param string $tag The tag for saving
+     * @param string $tag        The tag for saving
      * @param array  $file_names The appearances in files of the tag
      *
      * @return string The output
