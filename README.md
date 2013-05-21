@@ -14,15 +14,15 @@ Fork and install (you need composer for that!):
 
 Then, go to folder and execute:
 
-    ./console find /path/to/twig/templates  /path/to/messages.po -d -v -o
+    ./console find:tags /path/to/twig/templates  /path/to/messages.po Po -d -v -o
 
 Once you see that nothing wrong is going to happen then
 
-    ./console find /path/to/twig/templates  /path/to/messages.po
+    ./console find:tags /path/to/twig/templates  /path/to/messages.po Po
 
 For help:
 
-    ./console help find
+    :tags
 
 Once you have the PO translated, convert to .mo with your editor or command line:
 
