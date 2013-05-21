@@ -22,7 +22,7 @@ Once you see that nothing wrong is going to happen then
 
 For help:
 
-    :tags
+    ./console help find:tags
 
 Once you have the PO translated, convert to .mo with your editor or command line:
 
