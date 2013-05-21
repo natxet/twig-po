@@ -20,6 +20,10 @@ Once you see that nothing wrong is going to happen then
 
     ./console find:tags /path/to/twig/templates  /path/to/messages.po Po
 
+If you want to use it with other tags, for instance, for your PHP files with _('translation')
+
+    ./console find:tags /path/to/twig/templates  /path/to/messages.po Po -t "/_\((?: )?['\"]([^$]*)['\"](?: )?\)/muU"
+
 For help:
 
     ./console help find:tags
