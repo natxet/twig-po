@@ -264,8 +264,9 @@ class Find extends Command
         $this->n_read_files++;
         $matches = array_unique( $this->pregMatchAllFile( $filename, $this->tag_regex ) );
 
-        foreach ( $matches as $tag ) {
-            if (in_array( $tag, $existing_tags )) {
+        foreach ($matches as $tag) {
+
+            if (in_array( $this->format->outputString( $tag ), $existing_tags )) {
                 $this->n_matched_tags++;
                 continue;
             }

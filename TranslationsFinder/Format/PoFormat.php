@@ -34,8 +34,7 @@ class PoFormat implements FormatInterface {
      */
     public function outputTag( $tag, $file_names = array() )
     {
-        $tag = preg_replace( array( '/{{ (.*) }}/muU', '/{{(.*)}}/muU' ), '%\1%', $tag );
-        $tag = str_replace( '"', '\"', $tag );
+        $tag = $this->outputString( $tag );
         $output = '';
         foreach ( $file_names as $filename ) {
 
@@ -53,5 +52,20 @@ msgstr ""
 
 EOT;
         return $output;
+    }
+
+    /**
+     * Prepares the string of a tag to be stored in the local format. Also for being compared to the current file.
+     *
+     * @param string $string the Tag string
+     *
+     * @return string The string outputted
+     */
+    public function outputString( $string ) {
+
+        $string = preg_replace( array( '/{{ (.*) }}/muU', '/{{(.*)}}/muU' ), '%\1%', $string );
+        $string = str_replace( '"', '\"', $string );
+
+        return $string;
     }
 }
