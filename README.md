@@ -8,7 +8,7 @@ Instructions
 
 Fork and install (you need composer for that!):
 
-    git clone git@github.com:your-user/twig-po.git
+    git clone git@github.com:natxet/twig-po.git
     cd twig-po
     composer install
 
