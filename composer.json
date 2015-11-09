@@ -1,4 +1,15 @@
 {
+	"name": "natxet/twig-po",
+	"description": "Extract {%trans%} keys from twig and insert them in your PO file",
+	"type": "library",
+	"keywords": ["twig","i18n","po"],
+	"homepage": "https://github.com/natxet/twig-po",
+	"authors": [
+		{
+			"name": "Natxet",
+			"homepage": "https://github.com/natxet"
+		}
+	],
     "require": {
         "symfony/console": "2.3.*@dev"
     },
